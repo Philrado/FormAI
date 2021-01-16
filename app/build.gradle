@@ -36,4 +36,17 @@ dependencies {
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+
+    // If you want to use the accurate sdk
+    implementation 'com.google.mlkit:pose-detection-accurate:17.0.0'
+
+    // Import all camera and ml kit dependencies
+    implementation 'com.google.android.material:material:1.1.0'
+
+    // Camerax dependencies (THESE DEPENDENCIES WORK)
+    def camerax_version = '1.0.0-beta07' // Declare global variables
+    implementation "androidx.camera:camera-core:${camerax_version}"
+    implementation "androidx.camera:camera-camera2:${camerax_version}"
+    implementation "androidx.camera:camera-lifecycle:${camerax_version}"
+    implementation "androidx.camera:camera-view:1.0.0-alpha14"
 }
