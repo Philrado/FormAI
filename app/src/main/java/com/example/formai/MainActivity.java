@@ -30,6 +30,9 @@ import android.util.Size;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.ProgressBar;
+
+import com.example.formai.MLKIT.Angles;
+import com.example.formai.MLKIT.PoseClassification;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -70,7 +73,6 @@ public class MainActivity extends AppCompatActivity {
                 .setTargetResolution(resolution)
                 .build();
 
-        // Build the camera and select the back lens
         CameraSelector cameraSelector = new CameraSelector.Builder()
                 .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
                 .build();
@@ -88,9 +90,18 @@ public class MainActivity extends AppCompatActivity {
             @SuppressLint("UnsafeExperimentalUsageError")
             Image mediaImage = imageProxy.getImage();
             if (mediaImage != null) {
-
-                // Feed image pipeline into pose classifier API
                 InputImage image = InputImage.fromMediaImage(mediaImage, imageProxy.getImageInfo().getRotationDegrees());
+                PoseClassification poseClassification = new PoseClassification();
+
+
+                poseClassification.getPose(image).addOnSuccessListener(pose -> {
+                    List<PoseLandmark> allPoseLandmarks = pose.getAllPoseLandmarks();
+                    Angles angle = new Angles();
+                    System.out.println(angle.leftElbowAngle(pose));
+                    imageProxy.close();
+                }).addOnFailureListener(e -> {
+                    System.out.println("FUCK" + e.getMessage() + e.getCause());
+                });
             }
 
         });
@@ -116,7 +127,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         // Set the initial prompt
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Start posing!")
