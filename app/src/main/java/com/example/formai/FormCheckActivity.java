@@ -2,16 +2,23 @@ package com.example.formai;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.hardware.Camera;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 public class FormCheckActivity extends AppCompatActivity {
 
     private boolean correct = true;
+    FrameLayout frameLayout;
+    Camera camera;
+    ShowCamera showCamera;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,6 +33,8 @@ public class FormCheckActivity extends AppCompatActivity {
 
         workOutTypeText.setText(extras.getString("source"));
         correctButton.setBackgroundColor(getResources().getColor(R.color.green));
+
+
 
         backButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -48,6 +57,12 @@ public class FormCheckActivity extends AppCompatActivity {
                 }
             }
         });
+
+        frameLayout = findViewById(R.id.frameLayout);
+        camera = Camera.open();
+
+        showCamera = new ShowCamera(this, camera);
+        frameLayout.addView(showCamera);
     }
 
 
