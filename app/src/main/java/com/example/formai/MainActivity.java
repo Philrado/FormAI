@@ -85,10 +85,11 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     private SurfaceHolder surfaceHolder;
 
     private int cameraHeight, cameraWidth, xOffset, yOffset, boxWidth, boxHeight;
+    private int x = 0;
     // Method to bind camera to preview view
     @RequiresApi(api = Build.VERSION_CODES.P)
     private void bindPreview(@NonNull ProcessCameraProvider cameraProvider, PreviewView previewView) {
-        Size resolution = new Size(360, 480);
+        Size resolution = new Size(1080, 1920);
         // Generate preview with target resolution
         Preview preview = new Preview.Builder()
                 .setTargetResolution(resolution)
@@ -108,30 +109,33 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         // Get main executor thread to feed into analyzer
         imageAnalysis.setAnalyzer(getMainExecutor(), imageProxy -> {
             // Grab image from phone's camera
+
             @SuppressLint("UnsafeExperimentalUsageError")
             Image mediaImage = imageProxy.getImage();
             if (mediaImage != null) {
 
                 InputImage image = InputImage.fromMediaImage(mediaImage, imageProxy.getImageInfo().getRotationDegrees());
                 PoseClassification poseClassification = new PoseClassification();
-
-                FirebaseVisionImage images = FirebaseVisionImage.fromMediaImage(mediaImage, degreesToFirebaseRotation(imageProxy.getImageInfo().getRotationDegrees()));
-
-                Bitmap bmp = images.getBitmap();
-
-                DisplayMetrics displaymetrics = new DisplayMetrics();
-                getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
-                int height = bmp.getHeight();
-                int width = bmp.getWidth();
-
-
-                //Creating new cropped bitmap
-//                Bitmap bitmap = Bitmap.createBitmap(bmp, left, top, boxWidth, boxHeight);
-                // Print out bicep angle as a test
                 poseClassification.getPose(image).addOnSuccessListener(pose -> {
                     // Convert image to bitmap
                     List<PoseLandmark> allPoseLandmarks = pose.getAllPoseLandmarks();
                     Angles angle = new Angles();
+                    for (PoseLandmark poseLandmark : allPoseLandmarks) {
+                        if (poseLandmark.getLandmarkType() == PoseLandmark.LEFT_ELBOW) {
+                            int width = 1080;
+                            int xOffSet = 0;
+                            int xPosition = width + xOffSet + (int) poseLandmark.getPosition().x * -1;
+                            int yPosition = (int) poseLandmark.getPosition().y;
+                            DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition);
+                        }
+                        if (poseLandmark.getLandmarkType() == PoseLandmark.LEFT_WRIST) {
+                            int width = 1080;
+                            int xOffSet = 0;
+                            int xPosition = width + xOffSet + (int) poseLandmark.getPosition().x * -1;
+                            int yPosition = (int) poseLandmark.getPosition().y;
+                            DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition);
+                        }
+                    }
                     imageProxy.close();
                 }).addOnFailureListener(e -> {
                     System.out.println("FUCK" + e.getMessage() + e.getCause());
@@ -186,6 +190,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         // Create surface view overlay
         surfaceView = findViewById(R.id.overlay);
         surfaceView.setZOrderOnTop(true);
+        surfaceView.setWillNotDraw(false);
         surfaceHolder = surfaceView.getHolder();
         surfaceHolder.setFormat(PixelFormat.TRANSPARENT);
         surfaceHolder.addCallback(this);
@@ -205,40 +210,45 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             }
         }, ContextCompat.getMainExecutor(this));
     }
-//    private Canvas canvas;
-//    private Paint paint;
-//    private void DrawFocusRect(int color) {
-//        DisplayMetrics displaymetrics = new DisplayMetrics();
-//        getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
-//        int height = previewView.getHeight();
-//        int width = previewView.getWidth();
-//
-//        canvas = surfaceHolder.lockCanvas();
-//        canvas.drawColor(0, PorterDuff.Mode.CLEAR);
-//        //border's properties
-//        paint = new Paint();
-//        paint.setStyle(Paint.Style.STROKE);
-//        paint.setColor(color);
-//        paint.setStrokeWidth(5);
-//
-//        boxHeight = 20;
-//        boxWidth = 20;
-//        //Changing the value of x in diameter/x will change the size of the box ; inversely proportionate to x
-//        canvas.drawRect(left, top, right, bottom, paint);
-//        Rect rectangle = new Rect(20, 20, 40,40);
-//        canvas.drawRect()
-//
-//        surfaceHolder.unlockCanvasAndPost(canvas);
-//    }
+    private Canvas canvas;
+    private Paint paint;
+    private void DrawFocusRect(int color, int x, int y) {
+        DisplayMetrics displaymetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
+        int height;
+        int width;
+        height = 1080;
+        width = 1920;
+
+        //cameraHeight = height;
+        //cameraWidth = width;
+
+        canvas = surfaceHolder.lockCanvas();
+        canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+        //border's properties
+        paint = new Paint();
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setColor(color);
+        paint.setStrokeWidth(5);
+
+        int xOffSet = 0;
+        int yOffSet = 0;
+
+        int diameterOfRectangle = 40;
+        //Changing the value of x in diameter/x will change the size of the box ; inversely proportionate to x
+        canvas.drawRect(xOffSet + x, yOffSet + y, xOffSet + x + diameterOfRectangle, yOffSet + y + diameterOfRectangle, paint);
+        surfaceHolder.unlockCanvasAndPost(canvas);
+    }
+
+
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-//Drawing rectangle
-//        DrawFocusRect(Color.parseColor("#b3dabb"));
+
+//        DrawFocusRect(Color.parseColor("#b3dabb"), x);
     }
 
     @Override

@@ -15,9 +15,13 @@ public class PoseClassification {
         // Accurate pose detector on static images, when depending on the pose-detection-accurate sdk
         AccuratePoseDetectorOptions options =
                 new AccuratePoseDetectorOptions.Builder()
-                        .setDetectorMode(AccuratePoseDetectorOptions.SINGLE_IMAGE_MODE)
+                        .setDetectorMode(AccuratePoseDetectorOptions.STREAM_MODE)
                         .build();
         poseDetector = PoseDetection.getClient(options);
+//        PoseDetectorOptions options =
+//                new PoseDetectorOptions.Builder()
+//                        .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
+//                        .build();
     }
 
     // Return the task of getting the pose from the posedetector
