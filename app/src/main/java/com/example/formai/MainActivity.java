@@ -16,49 +16,32 @@ import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleOwner;
 
 import android.annotation.SuppressLint;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
-import android.graphics.Rect;
-import android.graphics.drawable.Drawable;
 import android.media.Image;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.util.Size;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
-import android.view.TextureView;
-import android.view.View;
 import android.widget.ProgressBar;
 
 import com.example.formai.MLKIT.Angles;
 import com.example.formai.MLKIT.PoseClassification;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.firebase.ml.vision.common.FirebaseVisionImage;
-import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata;
 import com.google.mlkit.vision.common.InputImage;
-import com.google.mlkit.vision.common.internal.ImageUtils;
-import com.google.mlkit.vision.pose.Pose;
 import com.google.mlkit.vision.pose.PoseLandmark;
 
-import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback{
 
@@ -83,9 +66,10 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     // SurfaceView overlay
     private SurfaceView surfaceView;
     private SurfaceHolder surfaceHolder;
-
     private int cameraHeight, cameraWidth, xOffset, yOffset, boxWidth, boxHeight;
     private int x = 0;
+    private TextToSpeech tts;
+    private boolean fuckyou = false;
     // Method to bind camera to preview view
     @RequiresApi(api = Build.VERSION_CODES.P)
     private void bindPreview(@NonNull ProcessCameraProvider cameraProvider, PreviewView previewView) {
@@ -117,25 +101,20 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 InputImage image = InputImage.fromMediaImage(mediaImage, imageProxy.getImageInfo().getRotationDegrees());
                 PoseClassification poseClassification = new PoseClassification();
                 poseClassification.getPose(image).addOnSuccessListener(pose -> {
-                    // Convert image to bitmap
+
                     List<PoseLandmark> allPoseLandmarks = pose.getAllPoseLandmarks();
                     Angles angle = new Angles();
-                    for (PoseLandmark poseLandmark : allPoseLandmarks) {
-                        if (poseLandmark.getLandmarkType() == PoseLandmark.LEFT_ELBOW) {
-                            int width = 1080;
-                            int xOffSet = 0;
-                            int xPosition = width + xOffSet + (int) poseLandmark.getPosition().x * -1;
-                            int yPosition = (int) poseLandmark.getPosition().y;
-                            DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition);
-                        }
-                        if (poseLandmark.getLandmarkType() == PoseLandmark.LEFT_WRIST) {
-                            int width = 1080;
-                            int xOffSet = 0;
-                            int xPosition = width + xOffSet + (int) poseLandmark.getPosition().x * -1;
-                            int yPosition = (int) poseLandmark.getPosition().y;
-                            DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition);
-                        }
-                    }
+                    // Test pose landmark hitboxes
+                    try {
+                        int width = 1080;
+                        int xOffSet = 0;
+                        int xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.LEFT_ELBOW).getPosition().x * -1;
+                        int yPosition = (int) pose.getPoseLandmark(PoseLandmark.LEFT_ELBOW).getPosition().y;
+                        DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+                        xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.LEFT_WRIST).getPosition().x * -1;
+                        yPosition = (int) pose.getPoseLandmark(PoseLandmark.LEFT_WRIST).getPosition().y;
+                        DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, false);
+                    } catch (NullPointerException ignore) {}
                     imageProxy.close();
                 }).addOnFailureListener(e -> {
                     System.out.println("FUCK" + e.getMessage() + e.getCause());
@@ -155,21 +134,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         preview.setSurfaceProvider(previewView.createSurfaceProvider());
 
     }
-    private int degreesToFirebaseRotation(int degrees) {
-        switch (degrees) {
-            case 0:
-                return FirebaseVisionImageMetadata.ROTATION_0;
-            case 90:
-                return FirebaseVisionImageMetadata.ROTATION_90;
-            case 180:
-                return FirebaseVisionImageMetadata.ROTATION_180;
-            case 270:
-                return FirebaseVisionImageMetadata.ROTATION_270;
-            default:
-                throw new IllegalArgumentException(
-                        "Rotation must be 0, 90, 180, or 270.");
-        }
-    }
+
     public CameraXConfig getCameraXConfig() {
         return Camera2Config.defaultConfig();
     }
@@ -194,6 +159,17 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         surfaceHolder = surfaceView.getHolder();
         surfaceHolder.setFormat(PixelFormat.TRANSPARENT);
         surfaceHolder.addCallback(this);
+
+        // Create virtual assistant
+        tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status == TextToSpeech.SUCCESS) {
+                    tts.setLanguage(Locale.CHINESE);
+                }
+            }
+        });
+
         // Define the processCameraProvider
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
         // When the camera provider resolves, it will bind the hardware camera to the preview
@@ -212,7 +188,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     }
     private Canvas canvas;
     private Paint paint;
-    private void DrawFocusRect(int color, int x, int y) {
+    private void DrawFocusRect(int color, int x, int y, boolean clear) {
         DisplayMetrics displaymetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
         int height;
@@ -224,12 +200,16 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         //cameraWidth = width;
 
         canvas = surfaceHolder.lockCanvas();
-        canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+        if (!clear) {
+            canvas.drawColor(0, PorterDuff.Mode.DARKEN);
+        } else {
+            canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+        }
         //border's properties
         paint = new Paint();
         paint.setStyle(Paint.Style.STROKE);
         paint.setColor(color);
-        paint.setStrokeWidth(5);
+        paint.setStrokeWidth(20);
 
         int xOffSet = 0;
         int yOffSet = 0;
@@ -238,6 +218,10 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         //Changing the value of x in diameter/x will change the size of the box ; inversely proportionate to x
         canvas.drawRect(xOffSet + x, yOffSet + y, xOffSet + x + diameterOfRectangle, yOffSet + y + diameterOfRectangle, paint);
         surfaceHolder.unlockCanvasAndPost(canvas);
+    }
+    private void refreshCanvas() {
+        canvas = surfaceHolder.lockCanvas();
+        canvas.drawColor(0, PorterDuff.Mode.CLEAR);
     }
 
 
