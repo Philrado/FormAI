@@ -1,3 +1,10 @@
 <resources>
-    <string name="app_name">formAI</string>
+    <string name="app_name">Form AI</string>
+    <string name="pushups">Push Ups</string>
+    <string name="squats">Squats</string>
+    <string name="pullups">Pull Ups</string>
+    <string name="bicepcurls">Bicep Curls</string>
+    <string name="correct">✔</string>
+    <string name="incorrect">✖</string>
+    <string name="check_form">CHECK FORM</string>
 </resources>
