@@ -4,6 +4,7 @@
 
 <img src="https://github.com/EltonK888/Hack_the_North_2021/blob/master/Screenshot_1610858027.png" width=300 alt="home screen">
 <img src="https://github.com/EltonK888/Hack_the_North_2021/blob/master/Screenshot_1610857991.png" width=300 alt="workout selection">
+<img src="https://github.com/EltonK888/Hack_the_North_2021/blob/master/2.PNG" width=300 alt="form ai">
 
 
 ## Inspiration
