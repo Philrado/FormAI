@@ -26,17 +26,24 @@ import android.os.Build;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.util.DisplayMetrics;
+import android.util.Log;
+import android.util.Range;
 import android.util.Size;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.View;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import com.example.formai.MLKIT.Angles;
 import com.example.formai.MLKIT.PoseClassification;
+import com.example.formai.exerciseClasses.Exercises;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.pose.Pose;
 import com.google.mlkit.vision.pose.PoseLandmark;
 
 import java.util.List;
@@ -69,7 +76,16 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     private int cameraHeight, cameraWidth, xOffset, yOffset, boxWidth, boxHeight;
     private int x = 0;
     private TextToSpeech tts;
-    private boolean fuckyou = false;
+    private TextToSpeech squatDepth;
+    private boolean assistantHasSpoken = false;
+    private boolean assistantHasSpokenAboutDepth = false;
+    private boolean assistantHasSpokenAboutProperForm = false;
+    private int rep = 0;
+    // rep count textview
+    private TextView repsTextView;
+    // The workout being performed
+    // This will be conditioned under a switch case statement
+    String selectedWorkout;
     // Method to bind camera to preview view
     @RequiresApi(api = Build.VERSION_CODES.P)
     private void bindPreview(@NonNull ProcessCameraProvider cameraProvider, PreviewView previewView) {
@@ -104,20 +120,187 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
 
                     List<PoseLandmark> allPoseLandmarks = pose.getAllPoseLandmarks();
                     Angles angle = new Angles();
+
+                    // Define width
+                    int width = 1080;
+                    int xOffSet = 0;
+
+                    // Define x and y coords for pose landmarks
+                    int xPosition;
+                    int yPosition;
                     // Test pose landmark hitboxes
+
+                    // Create exercise instance
+                    Exercises exercises = new Exercises();
                     try {
-                        int width = 1080;
-                        int xOffSet = 0;
-                        int xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.LEFT_ELBOW).getPosition().x * -1;
-                        int yPosition = (int) pose.getPoseLandmark(PoseLandmark.LEFT_ELBOW).getPosition().y;
-                        DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
-                        xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.LEFT_WRIST).getPosition().x * -1;
-                        yPosition = (int) pose.getPoseLandmark(PoseLandmark.LEFT_WRIST).getPosition().y;
-                        DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, false);
+                        switch(selectedWorkout) {
+                            case "Squats":
+
+                                // Draw rectangle borders for joint locations
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_HIP).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_HIP).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_KNEE).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_KNEE).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+
+                                // If squat has already been activated, test the squat for depth
+                                if (exercises.getSecondActivation()) {
+                                    exercises.testSquat(pose);
+//                                    if (exercises.getIsProperSquat() && !assistantHasSpokenAboutDepth) {
+////                                        Log.d("WOW:", "DEPTH WORKS");
+//                                        squatDepth.speak("Good depth!", TextToSpeech.QUEUE_FLUSH, null);
+//                                        exercises.resetFields();
+//                                        assistantHasSpokenAboutDepth = true;
+//
+//                                    } else
+                                    if (exercises.isBadDepth() && !assistantHasSpokenAboutProperForm) {
+                                        Log.d("TTS: ", "Try to go a little lower!");
+                                        squatDepth.speak("Try to go a little lower!", TextToSpeech.QUEUE_FLUSH, null);
+                                        exercises.resetFields();
+                                        assistantHasSpokenAboutProperForm = true;
+                                    }
+                                }
+
+                                // Only call when squat had not been activated
+                                else if (!assistantHasSpoken) {
+                                    exercises.activateSquat(pose);
+                                    if (exercises.getSecondActivation()) {
+//                                        assistantHasSpoken = true;
+                                        Snackbar.make(surfaceView, "Good squat form!", Snackbar.LENGTH_LONG).show();
+                                            // Responds to click on the action .show()
+//                                        tts.speak("Squat performed correctly!", TextToSpeech.QUEUE_FLUSH, null);
+                                        exercises.resetFields();
+                                    }
+                                }
+//                                Log.d("Activation: ", String.valueOf(exercises.getSecondActivation()));
+                                break;
+                            case "Push Ups":
+                                // Draw rectangle borders for joint locations
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_WRIST).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_WRIST).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_ELBOW).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_ELBOW).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+
+                                exercises.testBicep(pose);
+                                if (exercises.isBicepFlexed() && !assistantHasSpokenAboutDepth) {
+                                    assistantHasSpokenAboutDepth = true;
+                                    Log.d("BICEP: ", "IS FLEXED");
+                                    Snackbar.make(surfaceView, "Good bicep form!", Snackbar.LENGTH_LONG).show();
+//                                    repsTextView.setText("Reps: " + exercises.getBicepCount());
+                                    exercises.updateBicepCount();
+                                    repsTextView.setText(rep);
+//                                    tts.speak("Bicep exercise performed correctly!", TextToSpeech.QUEUE_FLUSH, null);
+
+                                    exercises.resetBicepFields();
+                                } else if (exercises.isBicepNotFlexedProperly() && !assistantHasSpokenAboutDepth) {
+//                                    Log.d("BICEP: ", "IS NOT FLEXED");
+//                                    assistantHasSpokenAboutDepth = true;
+//                                    assistantHasSpoken = false;
+//                                    squatDepth.speak("Try to contract your bicep more!", TextToSpeech.QUEUE_FLUSH, null);
+//                                    new MaterialAlertDialogBuilder(this)
+//                                            .setTitle("Oh dear...")
+//                                            .setMessage("Try utilizing your bicep's full range of motion, including contracting and extending your muscle all the way.")
+//                                            .setPositiveButton("Gotcha", (dialog, which) -> {
+//                                                dialog.dismiss();
+//                                            })
+//                                            .show();
+//                                    exercises.resetBicepFields();
+                                }
+                                break;
+                            case "Pull Ups":
+                                // Draw rectangle borders for joint locations
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_WRIST).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_WRIST).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_ELBOW).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_ELBOW).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+
+                                exercises.testBicep(pose);
+                                if (exercises.isBicepFlexed() && !assistantHasSpokenAboutDepth) {
+                                    assistantHasSpokenAboutDepth = true;
+                                    Log.d("BICEP: ", "IS FLEXED");
+                                    Snackbar.make(surfaceView, "Good bicep form!", Snackbar.LENGTH_LONG).show();
+//                                    repsTextView.setText("Reps: " + exercises.getBicepCount());
+                                    exercises.updateBicepCount();
+                                    repsTextView.setText(rep);
+//                                    tts.speak("Bicep exercise performed correctly!", TextToSpeech.QUEUE_FLUSH, null);
+
+                                    exercises.resetBicepFields();
+                                } else if (exercises.isBicepNotFlexedProperly() && !assistantHasSpokenAboutDepth) {
+//                                    Log.d("BICEP: ", "IS NOT FLEXED");
+//                                    assistantHasSpokenAboutDepth = true;
+//                                    assistantHasSpoken = false;
+//                                    squatDepth.speak("Try to contract your bicep more!", TextToSpeech.QUEUE_FLUSH, null);
+//                                    new MaterialAlertDialogBuilder(this)
+//                                            .setTitle("Oh dear...")
+//                                            .setMessage("Try utilizing your bicep's full range of motion, including contracting and extending your muscle all the way.")
+//                                            .setPositiveButton("Gotcha", (dialog, which) -> {
+//                                                dialog.dismiss();
+//                                            })
+//                                            .show();
+//                                    exercises.resetBicepFields();
+                                }
+                                break;
+                            case "Bicep Curls":
+
+                                // Draw rectangle borders for joint locations
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_WRIST).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_WRIST).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_ELBOW).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_ELBOW).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+                                xPosition = width + xOffSet + (int) pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER).getPosition().x * -1;
+                                yPosition = (int) pose.getPoseLandmark(PoseLandmark.RIGHT_SHOULDER).getPosition().y;
+                                DrawFocusRect(Color.parseColor("#FF0000"), xPosition, yPosition, true);
+
+                                exercises.testBicep(pose);
+                                if (exercises.isBicepFlexed() && !assistantHasSpokenAboutDepth) {
+                                    assistantHasSpokenAboutDepth = true;
+                                    Log.d("BICEP: ", "IS FLEXED");
+                                    Snackbar.make(surfaceView, "Good bicep form!", Snackbar.LENGTH_LONG).show();
+//                                    repsTextView.setText("Reps: " + exercises.getBicepCount());
+                                    exercises.updateBicepCount();
+                                    repsTextView.setText(rep);
+//                                    tts.speak("Bicep exercise performed correctly!", TextToSpeech.QUEUE_FLUSH, null);
+
+                                    exercises.resetBicepFields();
+                                } else if (exercises.isBicepNotFlexedProperly() && !assistantHasSpokenAboutDepth) {
+//                                    Log.d("BICEP: ", "IS NOT FLEXED");
+//                                    assistantHasSpokenAboutDepth = true;
+//                                    assistantHasSpoken = false;
+//                                    squatDepth.speak("Try to contract your bicep more!", TextToSpeech.QUEUE_FLUSH, null);
+//                                    new MaterialAlertDialogBuilder(this)
+//                                            .setTitle("Oh dear...")
+//                                            .setMessage("Try utilizing your bicep's full range of motion, including contracting and extending your muscle all the way.")
+//                                            .setPositiveButton("Gotcha", (dialog, which) -> {
+//                                                dialog.dismiss();
+//                                            })
+//                                            .show();
+//                                    exercises.resetBicepFields();
+                                }
+                                break;
+                        }
+
+
+//                        Log.d("Assistant: ", String.valueOf(assistantHasSpoken));
                     } catch (NullPointerException ignore) {}
                     imageProxy.close();
                 }).addOnFailureListener(e -> {
-                    System.out.println("FUCK" + e.getMessage() + e.getCause());
+
                 });
             }
 
@@ -144,14 +327,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        // Set the initial prompt
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("Start posing!")
-                .setMessage("Position your camera so it can show your full body. When you've held that position correctly for a few seconds, you'll receive a checkmark for that pose!")
-                .setPositiveButton("Accept", (dialog, which) -> {
-                    dialog.dismiss();
-                })
-                .show();
+
         // Create surface view overlay
         surfaceView = findViewById(R.id.overlay);
         surfaceView.setZOrderOnTop(true);
@@ -160,12 +336,35 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         surfaceHolder.setFormat(PixelFormat.TRANSPARENT);
         surfaceHolder.addCallback(this);
 
+        Bundle extras = getIntent().getExtras();
+//        Log.d("myTag", extras.getString("source"));
+        selectedWorkout = extras.getString("source");
+
+        // Set the initial prompt
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("It's time to get fit!")
+                .setMessage("Position your camera so it can show your full body. Our guided virtual assistant will check your form.")
+                .setPositiveButton("Accept", (dialog, which) -> {
+                    dialog.dismiss();
+                })
+                .show();
+
+
         // Create virtual assistant
         tts = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
             @Override
             public void onInit(int status) {
                 if (status == TextToSpeech.SUCCESS) {
-                    tts.setLanguage(Locale.CHINESE);
+                    tts.setLanguage(Locale.UK);
+                }
+            }
+
+        });
+        squatDepth = new TextToSpeech(this, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status == TextToSpeech.SUCCESS) {
+                    tts.setLanguage(Locale.UK);
                 }
             }
         });
@@ -185,6 +384,9 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 // This should never be reached.
             }
         }, ContextCompat.getMainExecutor(this));
+    }
+    public void addRep(View view) {
+        rep++;
     }
     private Canvas canvas;
     private Paint paint;
@@ -223,6 +425,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         canvas = surfaceHolder.lockCanvas();
         canvas.drawColor(0, PorterDuff.Mode.CLEAR);
     }
+
 
 
     @Override
