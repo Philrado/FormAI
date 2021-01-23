@@ -1,5 +1,8 @@
 # Form AI
 
+FormAI is an android application designed to determine the correctness of a user's workout form and correct it. Through the use of Google's ML Kit Vision Pose Detection API machine learning allows for tracking of the user's joints as nodes in order to calculate depth and angles for exercise accuracy and safety.
+
+
 ## Screenshots
 
 <img src="https://github.com/EltonK888/Hack_the_North_2021/blob/master/Screenshot_1610858027.png" width=300 alt="home screen">
